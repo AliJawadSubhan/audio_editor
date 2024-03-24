@@ -71,8 +71,12 @@ class _MyAppState extends State<MyApp> {
                 value: position.inSeconds.toDouble(),
                 onChanged: (value) async {
                   final position = Duration(seconds: value.toInt());
-                  await audioPlayer.seek(position);
-                  await audioPlayer.resume();
+                  var data = await Future.wait(
+                    [
+                      audioPlayer.seek(position),
+                      audioPlayer.resume(),
+                    ],
+                  );
                 },
               ),
               Row(
@@ -107,39 +111,78 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  // void processAudioAsset() async {
+  //   final byteData = await rootBundle.load('assets/audio/sample.mp3');
+  //   final originalFile =
+  //       File('${(await getTemporaryDirectory()).path}/sample.mp3');
+  //   await originalFile.writeAsBytes(byteData.buffer.asUint8List());
+
+  //   // Step 1: Convert to WAV
+  //   final wavFile = File('${(await getTemporaryDirectory()).path}/sample.wav');
+  //   final convertToWavCommand = '-y -i ${originalFile.path} ${wavFile.path}';
+  //   await ffmpeg_kit_flutter_full.FFmpegKit.execute(convertToWavCommand);
+
+  //   // Step 2: Increase Volume of WAV
+  //   final louderWavFile =
+  //       File('${(await getTemporaryDirectory()).path}/sample_louder.wav');
+  //   final increaseVolumeCommand =
+  //       '-y -i ${wavFile.path} -filter:a "volume=5.0" -t 5 ${louderWavFile.path}';
+
+  //   await ffmpeg_kit_flutter_full.FFmpegKit.execute(increaseVolumeCommand)
+  //       .then((session) async {
+  //     final returnCode = await session.getReturnCode();
+  //     session.getLogs().then((logs) {
+  //       for (var losg in logs) {
+  //         log("FFmpeg Log: ${losg.getMessage()}");
+  //       }
+  //     });
+
+  //     if (returnCode?.isValueSuccess() ?? false) {
+  //       log("FFmpegKit Success: Volume increased");
+  //       // Step 3: Play the processed louder WAV audio file
+  //       await audioPlayer.setSourceUrl(louderWavFile.path);
+  //       audioPlayer.play(DeviceFileSource(louderWavFile.path));
+  //     } else {
+  //       log("FFmpegKit Error: Failed to increase volume or convert file.");
+  //     }
+  //   }).catchError((error) {
+  //     log("FFmpegKit Error: $error");
+  //   });
+  // }
   void processAudioAsset() async {
     final byteData = await rootBundle.load('assets/audio/sample.mp3');
     final originalFile =
         File('${(await getTemporaryDirectory()).path}/sample.mp3');
     await originalFile.writeAsBytes(byteData.buffer.asUint8List());
 
-    // Step 1: Convert to WAV
-    final wavFile = File('${(await getTemporaryDirectory()).path}/sample.wav');
-    final convertToWavCommand = '-y -i ${originalFile.path} ${wavFile.path}';
-    await ffmpeg_kit_flutter_full.FFmpegKit.execute(convertToWavCommand);
+    final outputFile =
+        File('${(await getTemporaryDirectory()).path}/sample_louder.mp3');
 
-    // Step 2: Increase Volume of WAV
-    final louderWavFile =
-        File('${(await getTemporaryDirectory()).path}/sample_louder.wav');
     final increaseVolumeCommand =
-        '-y -i ${wavFile.path} -filter:a "volume=5.0" -t 5 ${louderWavFile.path}';
-
+        '-y -i ${originalFile.path} -filter:a "volume=43.0"  ${outputFile.path}';
+    // -c:a libmp3lame
+    // add this back if I don't know it fucking doesn't works. ong
     await ffmpeg_kit_flutter_full.FFmpegKit.execute(increaseVolumeCommand)
         .then((session) async {
       final returnCode = await session.getReturnCode();
       session.getLogs().then((logs) {
-        for (var losg in logs) {
-          log("FFmpeg Log: ${losg.getMessage()}");
+        for (var element in logs) {
+          log("element.getMessage() ${element.getMessage()} ");
         }
       });
+      session.getFailStackTrace().then((stackTrace) {
+        log("FFmpegKit StackTrace: $stackTrace");
+      });
 
+      log(returnCode!.isValueSuccess().toString() + " if it is true or not");
       if (returnCode?.isValueSuccess() ?? false) {
         log("FFmpegKit Success: Volume increased");
-        // Step 3: Play the processed louder WAV audio file
-        await audioPlayer.setSourceUrl(louderWavFile.path);
-        audioPlayer.play(DeviceFileSource(louderWavFile.path));
+        // Step 3: Play the processed audio file
+        await audioPlayer.setSourceUrl(outputFile.path);
+        audioPlayer.play(DeviceFileSource(outputFile.path));
       } else {
-        log("FFmpegKit Error: Failed to increase volume or convert file.");
+        // returnCode.er
+        log("FFmpegKit Error: Failed to increase volume");
       }
     }).catchError((error) {
       log("FFmpegKit Error: $error");
