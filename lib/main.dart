@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 // import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart' as ffmpeg_kit_flutter;
+import 'package:audio_editor/test.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -9,7 +10,7 @@ import 'dart:io';
 import 'package:ffmpeg_kit_flutter_full/ffmpeg_kit.dart'
     as ffmpeg_kit_flutter_full;
 
-void main() => runApp(MyApp());
+void main() => runApp(Apppp());
 
 class MyApp extends StatefulWidget {
   @override
@@ -102,7 +103,7 @@ class _MyAppState extends State<MyApp> {
                 onPressed: () {
                   processAudioAsset();
                 },
-                child: Text('Process Audio Asset'),
+                child: const Text('Process Audio Asset'),
               ),
             ],
           ),
@@ -111,6 +112,46 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  void processAudioAsset() async {
+    final byteData = await rootBundle.load('assets/audio/sample.mp3');
+    final originalFile =
+        File('${(await getTemporaryDirectory()).path}/sample.mp3');
+    await originalFile.writeAsBytes(byteData.buffer.asUint8List());
+
+    final outputFile =
+        File('${(await getTemporaryDirectory()).path}/sample_louder.mp3');
+
+    final increaseVolumeCommand =
+        '-y -i ${originalFile.path} -filter:a "volume=1.2"  ${outputFile.path}';
+    // -c:a libmp3lame
+    // add this back if I don't know it fucking doesn't works. ong
+    await ffmpeg_kit_flutter_full.FFmpegKit.execute(increaseVolumeCommand)
+        .then((session) async {
+      final returnCode = await session.getReturnCode();
+      session.getLogs().then((logs) {
+        for (var element in logs) {
+          log("element.getMessage() ${element.getMessage()} ");
+        }
+      });
+      session.getFailStackTrace().then((stackTrace) {
+        log("FFmpegKit StackTrace: $stackTrace");
+      });
+
+      log(returnCode!.isValueSuccess().toString() + " if it is true or not");
+      if (returnCode?.isValueSuccess() ?? false) {
+        log("FFmpegKit Success: Volume increased");
+        // Step 3: Play the processed audio file
+        await audioPlayer.setSourceUrl(outputFile.path);
+        audioPlayer.play(DeviceFileSource(outputFile.path));
+      } else {
+        // returnCode.er
+        log("FFmpegKit Error: Failed to increase volume");
+      }
+    }).catchError((error) {
+      log("FFmpegKit Error: $error");
+    });
+  }
+}
   // void processAudioAsset() async {
   //   final byteData = await rootBundle.load('assets/audio/sample.mp3');
   //   final originalFile =
@@ -149,43 +190,3 @@ class _MyAppState extends State<MyApp> {
   //     log("FFmpegKit Error: $error");
   //   });
   // }
-  void processAudioAsset() async {
-    final byteData = await rootBundle.load('assets/audio/sample.mp3');
-    final originalFile =
-        File('${(await getTemporaryDirectory()).path}/sample.mp3');
-    await originalFile.writeAsBytes(byteData.buffer.asUint8List());
-
-    final outputFile =
-        File('${(await getTemporaryDirectory()).path}/sample_louder.mp3');
-
-    final increaseVolumeCommand =
-        '-y -i ${originalFile.path} -filter:a "volume=43.0"  ${outputFile.path}';
-    // -c:a libmp3lame
-    // add this back if I don't know it fucking doesn't works. ong
-    await ffmpeg_kit_flutter_full.FFmpegKit.execute(increaseVolumeCommand)
-        .then((session) async {
-      final returnCode = await session.getReturnCode();
-      session.getLogs().then((logs) {
-        for (var element in logs) {
-          log("element.getMessage() ${element.getMessage()} ");
-        }
-      });
-      session.getFailStackTrace().then((stackTrace) {
-        log("FFmpegKit StackTrace: $stackTrace");
-      });
-
-      log(returnCode!.isValueSuccess().toString() + " if it is true or not");
-      if (returnCode?.isValueSuccess() ?? false) {
-        log("FFmpegKit Success: Volume increased");
-        // Step 3: Play the processed audio file
-        await audioPlayer.setSourceUrl(outputFile.path);
-        audioPlayer.play(DeviceFileSource(outputFile.path));
-      } else {
-        // returnCode.er
-        log("FFmpegKit Error: Failed to increase volume");
-      }
-    }).catchError((error) {
-      log("FFmpegKit Error: $error");
-    });
-  }
-}
