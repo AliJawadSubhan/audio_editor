@@ -29,7 +29,7 @@ class WaveSlider extends StatefulWidget {
     this.wavActiveColor = Colors.deepPurple,
     this.wavDeactiveColor = Colors.orange,
     this.sliderColor = Colors.red,
-    this.backgroundColor = Colors.grey,
+    this.backgroundColor = Colors.transparent,
     this.positionTextColor = Colors.black,
   }) : super(key: key);
 
@@ -133,16 +133,16 @@ class WaveSliderState extends State<WaveSlider> {
                 children: <Widget>[
                   Positioned.fill(
                     child: PolygonWaveform(
+                      absolute: true,
                       samples: widget.samples,
                       height: heightSlider,
                       width: widthSlider,
-                      maxDuration: Duration(seconds: widget.duration.toInt()),
+                      maxDuration: Duration(
+                          seconds: widget.duration.toInt() == 0
+                              ? 1
+                              : widget.duration.toInt()),
                       elapsedDuration: Duration(seconds: _getEndTime()),
-                      // showActiveWaveform: true,
                       activeColor: widget.wavActiveColor,
-                      // waveformColor: widget.wavDeactiveColor,
-                      // activeWaveformColor: widget.wavActiveColor,
-                      // showActiveWaveforms: true,
                     ),
                   ),
                   Bar(
@@ -237,9 +237,12 @@ class CenterBar extends StatelessWidget {
           width: width,
           child: Column(
             children: [
-              Container(height: 4, color: Colors.red),
+              Container(
+                height: 4,
+                color: Colors.deepPurple,
+              ),
               Expanded(child: Container()),
-              Container(height: 4, color: Colors.red),
+              Container(height: 4, color: Colors.deepPurple),
             ],
           ),
         ),

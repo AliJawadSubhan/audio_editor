@@ -19,7 +19,7 @@ class Apppp extends StatefulWidget {
 class _AppppState extends State<Apppp> {
   final audioPlayer = AudioPlayer();
   bool isPlaying = false;
-  double volume = 1.0; // Default volume level (1.0 is original)
+  double volume = 1.0;
   File? selectedFile;
   Duration duration = Duration.zero;
   Duration position = Duration.zero;
@@ -57,11 +57,17 @@ class _AppppState extends State<Apppp> {
 
   final m.Random random = m.Random();
 
+    double start = 0;
+    double end = 0;
   @override
   Widget build(BuildContext context) {
-    List<double> samples = List.generate(500, (index) => random.nextDouble());
+    List<double> samples = List.generate(
+      500,
+      (index) => random.nextDouble(),
+    );
 
     return MaterialApp(
+      theme: ThemeData(),
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Audio Player and Editor'),
@@ -95,7 +101,9 @@ class _AppppState extends State<Apppp> {
                       );
                       if (result != null) {
                         setState(() {
-                          selectedFile = File(result.files.single.path!);
+                          selectedFile = File(
+                            result.files.single.path!,
+                          );
                         });
                       }
                     },
@@ -116,10 +124,8 @@ class _AppppState extends State<Apppp> {
                   var data = await Future.wait(
                     [
                       audioPlayer.seek(position),
-                      audioPlayer.resume(),
                     ],
                   );
-                  setState(() {});
                 },
               ),
               Row(
@@ -143,26 +149,25 @@ class _AppppState extends State<Apppp> {
                 ],
               ),
               if (selectedFile != null)
-                Expanded(
+                SizedBox(
+                  width: double.infinity,
+                  height: 120,
                   child: WaveSlider(
-                    // heightWaveSlider: 129,
-                    // widthWaveSlider: 180
-                    // ,
-
                     samples: samples,
                     wavDeactiveColor: Colors.deepPurple,
-                    // backgroundColor: Colors.black,
-                    sliderColor: Colors.red,
-                    // widthWaveSlider: 200,
+                    sliderColor: Colors.deepPurple,
                     duration: duration.inSeconds.toDouble(),
                     callbackStart: (callbackStart) {
                       log('call backStart');
+                      start = callbackStart;
                     },
                     callbackEnd: (callbackEnd) {
                       log('call backEnd');
+                      end = callbackEnd;
                     },
                   ),
                 ),
+              if (isLoading) const Text("LOADING"),
             ],
           ),
         ),
@@ -170,15 +175,20 @@ class _AppppState extends State<Apppp> {
     );
   }
 
+  bool isLoading = false;
+
   Future<void> processAudio() async {
     final tempDir = await getTemporaryDirectory();
     final outputFile = File('${tempDir.path}/modified_audio.mp3');
 
-    final increaseVolumeCommand =
-        '-y -i ${selectedFile!.path} -filter:a "volume=$volume" ${outputFile.path}';
-
-    await ffmpeg_kit_flutter_full.FFmpegKit.execute(increaseVolumeCommand)
+    // final increaseVolumeCommand =
+    //     '-y -i ${selectedFile!.path} -filter:a "volume=$volume" ${outputFile.path}';
+    final trimCommand = '-y -i ${selectedFile!.path} -af "atrim=start=$start:end=$end" ${outputFile.path}';
+    await ffmpeg_kit_flutter_full.FFmpegKit.execute(trimCommand)
         .then((session) async {
+      setState(() {
+        isLoading = true;
+      });
       final returnCode = await session.getReturnCode();
       if (returnCode!.isValueSuccess()) {
         await audioPlayer.setSourceUrl(outputFile.path);
@@ -192,10 +202,8 @@ class _AppppState extends State<Apppp> {
     }).catchError((error) {
       log("FFmpegKit Error: $error");
     });
-  }
-
-  @override
-  void setState(VoidCallback fn) {
-    super.setState(fn);
+    setState(() {
+      isLoading = false;
+    });
   }
 }

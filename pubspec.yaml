@@ -41,6 +41,7 @@ dependencies:
   file_picker: ^8.0.0+1
   flutter_audio_waveforms: ^1.2.1+8
   audio_waveforms_fix: ^0.0.2
+  just_waveform: ^0.0.5
 
 dev_dependencies:
   flutter_test:

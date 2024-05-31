@@ -60,7 +60,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('Audio Player'),
+          title: const Text('Audio Player'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -124,7 +124,6 @@ class _MyAppState extends State<MyApp> {
     final increaseVolumeCommand =
         '-y -i ${originalFile.path} -filter:a "volume=1.2"  ${outputFile.path}';
     // -c:a libmp3lame
-    // add this back if I don't know it fucking doesn't works. ong
     await ffmpeg_kit_flutter_full.FFmpegKit.execute(increaseVolumeCommand)
         .then((session) async {
       final returnCode = await session.getReturnCode();
