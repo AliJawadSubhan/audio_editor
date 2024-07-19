@@ -57,8 +57,8 @@ class _AppppState extends State<Apppp> {
 
   final m.Random random = m.Random();
 
-    double start = 0;
-    double end = 0;
+  double start = 0;
+  double end = 0;
   @override
   Widget build(BuildContext context) {
     List<double> samples = List.generate(
@@ -67,7 +67,9 @@ class _AppppState extends State<Apppp> {
     );
 
     return MaterialApp(
-      theme: ThemeData(),
+      theme: ThemeData(
+        colorSchemeSeed: Colors.yellow,
+      ),
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Audio Player and Editor'),
@@ -158,11 +160,11 @@ class _AppppState extends State<Apppp> {
                     sliderColor: Colors.deepPurple,
                     duration: duration.inSeconds.toDouble(),
                     callbackStart: (callbackStart) {
-                      log('call backStart');
+                      log('call backStart $start');
                       start = callbackStart;
                     },
                     callbackEnd: (callbackEnd) {
-                      log('call backEnd');
+                      log('call backEnd $end');
                       end = callbackEnd;
                     },
                   ),
@@ -176,32 +178,40 @@ class _AppppState extends State<Apppp> {
   }
 
   bool isLoading = false;
-
   Future<void> processAudio() async {
+    setState(() {
+      isLoading = true;
+    });
+
     final tempDir = await getTemporaryDirectory();
     final outputFile = File('${tempDir.path}/modified_audio.mp3');
 
-    // final increaseVolumeCommand =
+    // final trimCommand =
     //     '-y -i ${selectedFile!.path} -filter:a "volume=$volume" ${outputFile.path}';
-    final trimCommand = '-y -i ${selectedFile!.path} -af "atrim=start=$start:end=$end" ${outputFile.path}';
+
+    final trimCommand =
+        '-y -i ${selectedFile!.path} -af "atrim=start=$start:end=$end" ${outputFile.path}';
     await ffmpeg_kit_flutter_full.FFmpegKit.execute(trimCommand)
         .then((session) async {
-      setState(() {
-        isLoading = true;
-      });
       final returnCode = await session.getReturnCode();
+      log("This is the output File ${outputFile.path}");
       if (returnCode!.isValueSuccess()) {
-        await audioPlayer.setSourceUrl(outputFile.path);
-        audioPlayer.play(DeviceFileSource(outputFile.path));
+        if (await outputFile.exists()) {
+          await audioPlayer.setSourceUrl(outputFile.path);
+          audioPlayer.play(DeviceFileSource(outputFile.path));
+        } else {
+          log("FFmpegKit Error: Output file does not exist");
+        }
       } else {
-        log("FFmpegKit Error: Failed to modify volume");
+        log("FFmpegKit Error: Failed to modify audio");
+        session.getFailStackTrace().then((stackTrace) {
+          log("FFmpegKit StackTrace: $stackTrace");
+        });
       }
-      session.getFailStackTrace().then((stackTrace) {
-        log("FFmpegKit StackTrace: $stackTrace");
-      });
     }).catchError((error) {
       log("FFmpegKit Error: $error");
     });
+
     setState(() {
       isLoading = false;
     });
